@@ -219,6 +219,15 @@ def add_configuration_args(parser: ArgumentParser, args: Namespace) -> None:
                               'and include a `default` (dataset-agostic) configuration and a `best` configuration (dataset-specific). '
                               'If not provided, the `default` configuration is used.')
 
+def add_block_adam_args(parser: ArgumentParser, args: Namespace) -> None:
+    """
+    Arguments for the AdamBlockEVLayerWise optimizer.
+    """
+    block_adam_group = parser.add_argument_group('AdamBlockEVLayerWise arguments', 'Arguments used to define the AdamBlockEVLayerWise optimizer.')
+    block_adam_group.add_argument('--blockadam_block_size', type=int, default=32,
+                                  help='Block size for AdamBlockEVLayerWise optimizer')
+    block_adam_group.add_argument('--blockadam_func', type=str, default='abs',
+                                  choices=['relu', 'abs', 'ns'], help='Function to be applied to eigenvalues to make them positive')
 
 def add_initial_args(parser) -> ArgumentParser:
     """

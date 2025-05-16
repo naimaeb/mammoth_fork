@@ -75,8 +75,48 @@ class BaseMNISTMLP(MammothBackbone):
         raise NotImplementedError("Unknown return type")
 
 
+class MultiHeadMLP(MammothBackbone):
+    def __init__(self, input_size, hidden_size, output_size, num_heads):
+        super(MultiHeadMLP, self).__init__()
+
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.num_heads = num_heads
+
+        self.features = Sequential(*[
+            Linear(input_size, hidden_size),
+            ReLU(inplace=False),
+            Linear(hidden_size, hidden_size),
+            ReLU(inplace=False)
+        ])
+        self.heads = ModuleList([
+            Linear(hidden_size, output_size)
+            for _ in range(self.num_heads)
+        ])
+        self.features.apply(xavier)
+        self.heads.apply(xavier)
+
+    def forward(self, x, task_id=None, returnt='logits'):
+        assert out in ['out', 'features']
+        x = x.view(x.shape[0], -1)
+
+        features = self.features(x)
+        if returnt == 'features':
+            return features
+
+        logits = self.heads[task_id](features)
+        if returnt == 'logits':
+            return logits
+
+        return logits, features
+
 @register_backbone("mnistmlp")
 def mnistmlp(mlp_hidden_size: int = 100) -> BaseMNISTMLP:
     if mlp_hidden_size != 100:
         logging.info(f"hidden size is set to `{mlp_hidden_size}` instead of the default `100`")
     return BaseMNISTMLP(28 * 28, 10, hidden_size=mlp_hidden_size)
+
+@register_backbone('multiheadmnistmlp')
+def multiheadmnistmlp(mlp_hidden_size: int = 100, num_heads: int = 10):
+    return MultiHeadMLP(input_size=28 * 28, hidden_size=mlp_hidden_size, output_size=10, num_heads=num_heads)

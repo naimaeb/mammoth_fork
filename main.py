@@ -38,6 +38,19 @@ else:
 
 sys.path.insert(0, mammoth_path)
 
+mammoth_path = '/home/nelosegui/BIFOLD_work/CL_curved/BlockOpt2GeomRep/mammoth_fork'
+sys.path.append(mammoth_path)
+sys.path.append(os.path.join(mammoth_path, '/datasets'))
+sys.path.append(os.path.join(mammoth_path, '/backbone'))
+sys.path.append(os.path.join(mammoth_path, '/models'))
+# our optimizers package is located outside of mammoth project
+mammoth_parent = '/home/nelosegui/BIFOLD_work/CL_curved/BlockOpt2GeomRep'
+sys.path.append(mammoth_parent)
+sys.path.append(os.path.join(mammoth_parent, 'optimizers'))
+sys.path.append(os.path.join(mammoth_parent, 'utils'))
+#blockopt2geomrep_path = '/nfs/scistore19/alistgrp/imodoran/workplace'
+#sys.path.append(blockopt2geomrep_path)
+
 from utils import setup_logging
 setup_logging()
 
@@ -169,7 +182,7 @@ def parse_args():
     from utils import create_if_not_exists
     from utils.conf import warn_once
     from utils.args import add_initial_args, add_management_args, add_experiment_args, add_configuration_args, clean_dynamic_args, \
-        check_multiple_defined_arg_during_string_parse, add_dynamic_parsable_args, update_cli_defaults, get_single_arg_value, \
+        add_block_adam_args, check_multiple_defined_arg_during_string_parse, add_dynamic_parsable_args, update_cli_defaults, get_single_arg_value, \
         pretty_format_args
 
     from models import get_all_models
@@ -192,6 +205,9 @@ def parse_args():
     config = load_configs(parser)
 
     add_help(parser)
+
+    # 2.1) add Block Adam parameters (added by ionut)
+    add_block_adam_args(parser, args)
 
     # 3) add the remaining arguments
 

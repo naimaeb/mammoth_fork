@@ -1,0 +1,22 @@
+N_TASKS: 20
+N_CLASSES_PER_TASK: 10
+N_CLASSES: 10
+SIZE: [ 28, 28 ]
+MEAN: [ 0.1307 ]
+STD: [ 0.3081 ]
+TRANSFORM:
+    - ToTensor
+    - Normalize:
+        mean: [ 0.1307 ]
+        std: [ 0.3081 ]
+TEST_TRANSFORM:
+    - ToTensor
+    - Normalize:
+        mean: [ 0.1307 ]
+        std: [ 0.3081 ]
+batch_size: 128
+backbone:
+    type: mnistmlp
+    args:
+        mlp_hidden_size: 100
+n_epochs: 10

@@ -47,6 +47,8 @@ if TYPE_CHECKING:
     from datasets.utils.continual_dataset import ContinualDataset
     from backbone import MammothBackbone
 
+#from optimizers import AdamBlockEVLayerWise, Muon
+from pytorch_optimizer import Shampoo
 with suppress(ImportError):
     import wandb
 
@@ -57,7 +59,7 @@ class ContinualModel(nn.Module):
     """
     NAME: str
     COMPATIBILITY: List[str]
-    AVAIL_OPTIMS = ['sgd', 'adam', 'adamw']
+    AVAIL_OPTIMS = ['sgd', 'adam', 'adamw', 'blockadam', 'dist-shmp', 'shmp', 'muon-ns', 'muon-svd']
 
     args: Namespace  # The command line arguments
     device: torch.device  # The device to be used for training
@@ -280,20 +282,42 @@ class ContinualModel(nn.Module):
             return None
 
         lr = lr if lr is not None else self.args.lr
-        # check if optimizer is in torch.optim
-        supported_optims = {optim_name.lower(): optim_name for optim_name in dir(optim) if optim_name.lower() in self.AVAIL_OPTIMS}
-        opt = None
-        if self.args.optimizer.lower() in supported_optims:
-            if self.args.optimizer.lower() == 'sgd':
-                opt = getattr(optim, supported_optims[self.args.optimizer.lower()])(params, lr=lr,
-                                                                                    weight_decay=self.args.optim_wd,
-                                                                                    momentum=self.args.optim_mom,
-                                                                                    nesterov=self.args.optim_nesterov)
-            elif self.args.optimizer.lower() == 'adam' or self.args.optimizer.lower() == 'adamw':
-                opt = getattr(optim, supported_optims[self.args.optimizer.lower()])(params, lr=lr,
-                                                                                    weight_decay=self.args.optim_wd)
 
-        if opt is None:
+        if self.args.optimizer.lower() == 'sgd':
+            opt = optim.SGD(params, lr=lr, weight_decay=self.args.optim_wd, momentum=self.args.optim_mom, nesterov=self.args.optim_nesterov)
+        elif self.args.optimizer.lower() == 'adam':
+            opt = optim.Adam(params, lr=lr, weight_decay=self.args.optim_wd)
+        elif self.args.optimizer.lower() == 'adamw':
+            opt = optim.AdamW(params, lr=lr, weight_decay=self.args.optim_wd)
+        elif self.args.optimizer.lower() == 'blockadam':
+            opt = AdamBlockEVLayerWise(
+                params=params,
+                block_size=self.args.blockadam_block_size,
+                lr=lr,
+                beta1=0.9,
+                beta2=0.999,
+                weight_decay=self.args.optim_wd,
+                eps=1e-8,
+                ev_func=self.args.blockadam_func,
+                use_sqrt=True)
+        elif self.args.optimizer.lower() == 'shmp':
+            opt = Shampoo(params, lr=lr)
+        elif self.args.optimizer.lower() == 'dist-shmp':
+            opt = DistributedShampoo(
+                params,
+                lr=lr,
+                betas=(0.9, 0.999),
+                epsilon=1e-8,
+                grafting_config=AdamGraftingConfig(beta2=0.999, epsilon=1e-8,))
+        elif self.args.optimizer.lower() in ['muon-ns', 'muon-svd']:
+            is_ns = self.args.optimizer.lower() == 'muon-ns'
+            # is_svd = self.args.optimizer.lower() == 'muon-svd'
+            opt = Muon(
+                params,
+                lr=lr,
+                ns_steps=100,
+                ortho_func='ns' if is_ns else 'svd')
+        else:
             raise ValueError('Unknown optimizer: {}'.format(self.args.optimizer))
         return opt
 
